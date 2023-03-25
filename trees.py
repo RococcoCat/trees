@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
+from scipy.cluster.hierarchy import dendrogram, linkage
+import matplotlib.pyplot as plt
 
-# create distance matrix using Jukes Cantor distance
+# calculate Jukes-Cantor distance
 def jc_dist(s1, s2):
     length = min(len(s1), len(s2))
     pt = [i != j for i, j in zip(s1[:length], s2[:length])].count(True)
@@ -26,11 +28,11 @@ def upgma(df, out_file, d):
     if len(df.columns) == 2:
         a,b = df.stack().idxmin()
         dist = 0.5 * df.loc[a][b]
-        out_file.write("Tree: \n")
-        if d == True:
-            out_file.write(f"({a}:{dist}, {b}:{dist}) \n")
-        else:
-            out_file.write(f"({a}, {b}) \n")
+        with open(out_file, "w") as out_file:
+            if d == True:
+                out_file.write(f"({a}:{dist}, {b}:{dist}) \n")
+            else:
+                out_file.write(f"({a}, {b}) \n")
         return (', '.join(df.columns))
     # recursive case: more than 2 taxa left
     else:
@@ -53,19 +55,18 @@ def upgma(df, out_file, d):
         df.loc[[a]] = ab
         df = df.rename(columns={a: col_name})
         df = df.rename(index={a: col_name})
-        out_file.write(col_name + "\n")
         return upgma(df, out_file, d)
     
 # Neighbor joining
-def neighbor_joining(df, out_file, d):
+def neighbor_joining(df, out_file, d=True):
     if len(df.columns) == 2:
         a,b = df.stack().idxmin()
         dist = abs(0.5 * df.loc[a][b])
-        out_file.write("Tree: \n")
-        if d == True:
-            out_file.write(f"({a}:{dist}, {b}:{dist}) \n")
-        else:
-            out_file.write(f"({a}, {b}) \n")
+        with open(out_file, "w") as w:
+            if d == True:
+                w.write(f"({a}:{dist}, {b}:{dist}) \n")
+            else:
+                w.write(f"({a}, {b}) \n")
         return (', '.join(df.columns))
     else:
         u = {}
@@ -84,6 +85,17 @@ def neighbor_joining(df, out_file, d):
         df = df.drop(b, axis=0)        
         df = df.rename(columns={a: col_name})
         df = df.rename(index={a: col_name})
-        out_file.write(col_name + "\n")
         return neighbor_joining(df, out_file, d)
-        
+
+def display_tree(df):
+    # Calculate linkage matrix
+    Z = linkage(df)
+
+    # Create dendrogram
+    dendro = dendrogram(Z)
+    dendrogram(Z, labels=df.columns, orientation='left')
+
+    plt.title('Phylogenetic Tree')
+    plt.xlabel('Species')
+    plt.ylabel('Distance')
+    plt.show()
